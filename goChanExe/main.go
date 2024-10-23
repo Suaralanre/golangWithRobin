@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 	"os"
-	"unicode"
 	"sync"
+	"unicode"
 )
 
 var sampleString = `Golden sunsets paint the sky,
@@ -20,25 +20,25 @@ A sense of freedom, my worries release.
 So let the night, with its darkness fall,
 For in its shadows, I hear my heart's call.`
 
-
 func main() {
 	wg := &sync.WaitGroup{}
 
-	wg.Add(2)
-	ch := make(chan rune) 
+	ch := make(chan rune)
+
+	wg.Add(1)
+
 	go func() {
-		
+		defer wg.Done()
 		for _, char := range sampleString {
 			ch <- char
 		}
-		fmt.Print("Done here")
-		fmt.Print("Done again")
-		close(ch) 
-		wg.Done()
-	}()
 
-	go readChan(ch, wg)
+		close(ch)
+		
+	}()
 	
+	go readChan(ch, wg)
+
 	wg.Wait()
 }
 
@@ -52,9 +52,10 @@ func createTextFile(filename string) *os.File {
 	return file
 }
 
-
 // readChan reads from the channel and writes to the appropriate files.
 func readChan(ch chan rune, wg *sync.WaitGroup) {
+	defer wg.Done()
+
 	upperFile := createTextFile("upper.txt")
 	defer upperFile.Close()
 	lowerFile := createTextFile("lower.txt")
@@ -71,8 +72,8 @@ func readChan(ch chan rune, wg *sync.WaitGroup) {
 		if unicode.IsUpper(char) {
 			// Write to upper.txt and count lines.
 			fmt.Fprintln(upperFile, string(char))
-				upperLineCount++
-			
+			upperLineCount++
+
 		} else if unicode.IsLower(char) {
 			// Write to lower.txt and count lines.
 			fmt.Fprintln(lowerFile, string(char))
@@ -85,5 +86,4 @@ func readChan(ch chan rune, wg *sync.WaitGroup) {
 	} else if lowerLineCount >= 100 {
 		fmt.Println("lower.txt reached 100 lines first!")
 	}
-	wg.Done()
 }
