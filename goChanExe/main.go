@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"sync"
@@ -23,23 +24,17 @@ For in its shadows, I hear my heart's call.`
 func main() {
 	wg := &sync.WaitGroup{}
 
+	ctx, cancel := context.WithCancel(context.Background())
+
 	ch := make(chan rune)
 
-	wg.Add(1)
+	wg.Add(2)
 
-	go func() {
-		defer wg.Done()
-		for _, char := range sampleString {
-			ch <- char
-		}
-
-		close(ch)
-		
-	}()
-	
-	go readChan(ch, wg)
+	go writeChan(ctx, wg, ch)
+	go readChan(cancel, wg, ch)
 
 	wg.Wait()
+	defer cancel()
 }
 
 // createTextFile creates and returns a file handler.
@@ -52,10 +47,26 @@ func createTextFile(filename string) *os.File {
 	return file
 }
 
-// readChan reads from the channel and writes to the appropriate files.
-func readChan(ch chan rune, wg *sync.WaitGroup) {
+// writes sample string into the channel one rune at a time.
+func writeChan(ctx context.Context, wg *sync.WaitGroup, ch chan rune) {
 	defer wg.Done()
+	for _, char := range sampleString {
+		select {
+		case <-ctx.Done():
+			close(ch)
+			return
+		case ch <- char:
+		}
+	}
+	
+	close(ch)
+	
+}
 
+// readChan reads from the channel and writes to the appropriate files.
+func readChan(cancel context.CancelFunc, wg *sync.WaitGroup, ch chan rune) {
+	defer wg.Done()
+	defer cancel()
 	upperFile := createTextFile("upper.txt")
 	defer upperFile.Close()
 	lowerFile := createTextFile("lower.txt")
