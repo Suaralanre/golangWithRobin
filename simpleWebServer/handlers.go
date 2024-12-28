@@ -49,7 +49,11 @@ func SetTime(w http.ResponseWriter, r *http.Request) {
 
 	parsedTime, err := time.Parse(time.RFC3339, newTime)
 	if err != nil {
-		WriteError(w, "Invalid time format: return time in RFC3339", http.StatusBadRequest)
+		WriteError(
+			w,
+			"Invalid time format: return time in RFC3339",
+			http.StatusBadRequest,
+		)
 		log.Print("Error parsing time")
 		return
 	}
