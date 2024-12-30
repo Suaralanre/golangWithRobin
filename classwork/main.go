@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -12,7 +13,7 @@ import (
 type DamageReport struct {
 	Description string    `json:"description"`
 	CreatedAt   time.Time `json:"created_at"`
-	Files       []File  `json:"files"`
+	Files       []File      `json:"files"`
 }
 
 type File struct {
@@ -41,15 +42,33 @@ func reportHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jsonReport, err := json.MarshalIndent(report, "", "")
+	for i, file := range report.Files {
+	decodedData, err := base64.StdEncoding.DecodeString(file.Data)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	// write json report to a file
+	fileName := fmt.Sprintf("file_%d%s", i, getFileExtension(file.Mime))
+	err = os.WriteFile(fileName, decodedData, 0700)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	report.Files[i].Data = fileName
+}
+	
 
-	err = os.WriteFile("damage_report.json", jsonReport, 0700)
+	jsonReport, err := json.MarshalIndent(&report, "", "")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	reportName := fmt.Sprintf("damage_report_%s.json", report.CreatedAt.Format("2006-01-02"))
+
+	// write json report to a file
+	err = os.WriteFile(reportName, jsonReport, 0700)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -58,4 +77,20 @@ func reportHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 	fmt.Fprint(w, "Damage report created successfully!")
 
+}
+
+func getFileExtension(mime string) string {
+	switch mime {
+	case "image/jpeg":
+		return ".jpg"
+	case "image/png":
+		return ".png"
+	// just fooling around here
+	case "image/gif":
+		return ".gif"
+	case "application/pdf":
+		return ".pdf"
+	default:
+		return ".bin"
+	}
 }
