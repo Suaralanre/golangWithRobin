@@ -4,3 +4,6 @@
 main
 *.exe
 .vscode
+*.json
+*.jpg
+*.png
