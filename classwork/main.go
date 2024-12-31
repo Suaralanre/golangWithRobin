@@ -59,7 +59,7 @@ func reportHandler(w http.ResponseWriter, r *http.Request) {
 }
 	
 
-	jsonReport, err := json.MarshalIndent(&report, "", "")
+	jsonReport, err := json.MarshalIndent(&report, "", "    ")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
